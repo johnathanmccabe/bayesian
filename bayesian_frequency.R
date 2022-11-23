@@ -55,8 +55,3 @@ results <- purrr::map(number_of_trial, function(n){
 
 
 cowplot::plot_grid(plotlist = results)
-
-
-ppois(3,7.8)
-
-
