@@ -1,0 +1,90 @@
+# Frequency Bayesian
+
+#  ########################################################################
+#'
+#' Idea is to try and update the Poisson mean using a Bayesian approach
+#' where underlying mean follows a Gamma distribution
+#' 
+#' Hyperparameters are exposure_base and var_mult - the  variance multiple of the prior NB
+#'
+#########################################################################
+
+library(tidyverse)
+
+
+# number_of_trials = c(0,1, 5, 10, 20)
+# actual = rpois(n = max(number_of_trials), lambda = 6)
+# expected = 7
+
+exposure = 116774172
+
+
+exposure_base = 1e8
+number_of_trials = exposure / exposure_base
+actual = 8.588633957
+expected = 3.05875 
+
+#mean number per 'trial'
+mean = expected / number_of_trials
+
+## initial variance multiple for NegBen distribution with no data 
+var_mult = 3
+
+results <- purrr::map(c(0,1), function(n){
+  
+  
+  a = ifelse(n > 0, sum(actual), 0)
+  
+  # initital prior
+  alpha = 1/(cv*cv)
+  beta =  alpha / mean
+  
+  beta = 1 / (var_mult - 1)
+  alpha = mean * beta
+  
+  print(alpha)
+  print(beta)
+  # posterior
+  alpha = alpha + a
+  beta = beta + n * number_of_trials
+  
+  # parameters related to exposure - so scale
+  r = alpha * number_of_trials
+  p = beta / (1 + beta)
+  
+  
+  print(r)
+  print(beta)
+  x = seq(0,max(actual) * 2, 1)
+  posterior = dnbinom(x = x,
+                      size = r,
+                      prob = p)
+  
+  mean = r * (1-p) / p
+  var_prop = 1 / p
+  
+  print(glue::glue("n:{n}; Mean: {mean}; Var/Mean: {var_prop}"))
+  
+  posterior_plot <- ggplot2::ggplot(data = data.frame(x = x, y = posterior)) +
+    ggplot2::geom_area(ggplot2::aes(x,y), fill = "light blue") +
+    ggplot2::geom_line(ggplot2::aes(x,y), color = "blue") +
+    geom_vline(xintercept = mean, linetype = "dashed") +
+    ggplot2::theme_minimal() +
+    ggplot2::ggtitle(label = glue::glue("N:{n}; A:{round(ifelse(n > 0, a * k, 0), 1)}; E:{round(mean, 2)}")) +
+    scale_y_continuous(labels = NULL,
+                       name = "Density")
+  
+  
+  retval <- list(plot = posterior_plot,
+                 r = r,
+                 p = p)
+  retval <- posterior_plot
+  return(retval)
+})
+
+
+
+
+cowplot::plot_grid(plotlist = results)
+
+
